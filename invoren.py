@@ -27,6 +27,27 @@ def extract_invoice_number(pdf_path):
         update_system_error(f"Error in extract_invoice_number: {e}")
         return None
 
+def split(text):
+    SPACE = " "
+    sep = SPACE     # default separator
+    filepaths = []  # list to store the filepaths
+    s = ""          # filepath string
+    for c in text:
+        if c == sep:  # at the end of a token
+            filepaths.append(s)  # save the filepath
+            if sep == "}":
+                sep = None
+            s = ""       # reset filepath
+        elif c == "{":   # start of a filepath with space
+            sep = "}"    # set ending separator
+        elif c == SPACE and sep is None:
+            sep = SPACE  # set ending separator
+        else:
+            s += c       # append character to filepath
+    if s:
+        filepaths.append(s) # add the last filepath
+    return filepaths
+
 def rename_pdf_file(file_path, invoice_number):
     try:
         directory, _ = os.path.split(file_path)
@@ -48,22 +69,23 @@ def rename_pdf_file(file_path, invoice_number):
         return None
 
 def drop(event):
-    dropped_files = event.data.split()
+    dropped_files = split(event.data)  # Split by new lines for multiple files
     output_text.set("")  # Clear output at the beginning of a new drop event
+
     if len(dropped_files) > 5:
         append_to_output("Error: Please drop 5 or fewer files.")
         return
 
     for file_path in dropped_files:
-        file_path = file_path.strip()  # Remove leading/trailing white spaces
-        # Correctly handle file paths with spaces and special characters
-        if os.path.exists(file_path):
-            if file_path.lower().endswith('.pdf'):
-                process_pdf(file_path)
-            else:
-                append_to_output(f"Error: {file_path} is not a PDF file.\n")
+        # Handle file paths with spaces and special characters
+        file_path = file_path.strip()
+
+        # Check if file exists and is a PDF
+        if os.path.exists(file_path) and file_path.lower().endswith('.pdf'):
+            process_pdf(file_path)
         else:
-            append_to_output(f"Error: File {file_path} does not exist.\n")
+            append_to_output(f"Error: {file_path} is not a valid PDF file.\n")
+
 
 def process_pdf(file_path):
     extracted_invoice_number = extract_invoice_number(file_path)
