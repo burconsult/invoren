@@ -51,15 +51,19 @@ def drop(event):
     dropped_files = event.data.split()
     output_text.set("")  # Clear output at the beginning of a new drop event
     if len(dropped_files) > 5:
-        update_output("Error: Please drop 5 or fewer files.")
+        append_to_output("Error: Please drop 5 or fewer files.")
         return
 
-    for file in dropped_files:
-        file_path = file.replace("{", "").replace("}", "")  # Clean up file path
-        if not file_path.lower().endswith('.pdf'):
-            update_output(f"Error: {file_path} is not a PDF file.")
-            continue
-        process_pdf(file_path)
+    for file_path in dropped_files:
+        file_path = file_path.strip()  # Remove leading/trailing white spaces
+        # Correctly handle file paths with spaces and special characters
+        if os.path.exists(file_path):
+            if file_path.lower().endswith('.pdf'):
+                process_pdf(file_path)
+            else:
+                append_to_output(f"Error: {file_path} is not a PDF file.\n")
+        else:
+            append_to_output(f"Error: File {file_path} does not exist.\n")
 
 def process_pdf(file_path):
     extracted_invoice_number = extract_invoice_number(file_path)
